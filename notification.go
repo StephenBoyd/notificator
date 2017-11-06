@@ -1,7 +1,9 @@
 package notificator
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -28,7 +30,20 @@ type Notificator struct {
 	defaultIcon string
 }
 
+func checkDisplay() error {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+		if len(os.Getenv("DISPLAY")) == 0 {
+			return errors.New("No display available for notifications")
+		}
+	}
+	return nil
+}
+
 func (n Notificator) Push(title string, text string, iconPath string, urgency string) error {
+	err := checkDisplay()
+	if err != nil {
+		return err
+	}
 	icon := n.defaultIcon
 
 	if iconPath != "" {
@@ -60,9 +75,9 @@ func (o osxNotificator) push(title string, text string, iconPath string) *exec.C
 	if term_notif == true {
 		return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-appIcon", iconPath)
 	} else if os_version_check == true {
-		title = strings.Replace(title, `"`, `\"`,  -1)
-		text = strings.Replace(text, `"`, `\"`,  -1)
-		
+		title = strings.Replace(title, `"`, `\"`, -1)
+		text = strings.Replace(text, `"`, `\"`, -1)
+
 		notification := fmt.Sprintf("display notification \"%s\" with title \"%s\" subtitle \"%s\"", text, o.AppName, title)
 		return exec.Command("osascript", "-e", notification)
 	}
